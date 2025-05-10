@@ -86,6 +86,12 @@ public class ResidentService {
         return residentRepository.findResidentsByFilters(houseNameFilter, roleFilter, searchFilter);
     }
 
+    @GetMapping("/residentsearchresidentsbyfilters")
+    public List<Resident> residentSearchResidentsByFilters(@RequestParam Integer residentId, @RequestParam(required = false) String houseNameFilter, @RequestParam String roleFilter, @RequestParam(required = false) String searchFilter) {
+        return residentRepository.residentSearchResidentsByFilters(residentId, houseNameFilter, roleFilter == null ? null : AccountType.valueOf(roleFilter), searchFilter);
+
+    }
+
     @DeleteMapping("/deleteresidentbyid")
     public void deleteResidentById(@RequestParam Integer id) {
         residentRepository.deleteByResidentId(id);

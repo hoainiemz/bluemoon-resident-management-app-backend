@@ -58,4 +58,31 @@ public interface ResidentRepository extends JpaRepository<Resident, Integer> {
     );
 
     void deleteByResidentId(Integer residentId);
+
+    @Query("""
+    SELECT r FROM Resident r
+    JOIN Account a ON r.userId = a.userId
+    JOIN Settlement s ON r.residentId = s.residentId
+    JOIN Apartment ap ON s.apartmentId = ap.apartmentId
+    WHERE s.apartmentId IN (
+        SELECT s2.apartmentId FROM Settlement s2 WHERE s2.residentId = :residentId
+    )
+    AND (
+        :searchFilter IS NULL OR :searchFilter = ''
+        OR LOWER(r.firstName) LIKE LOWER(CONCAT('%', :searchFilter, '%'))
+        OR LOWER(r.lastName) LIKE LOWER(CONCAT('%', :searchFilter, '%'))
+    )
+    AND (
+        :roleFilter IS NULL OR a.role = :roleFilter
+    )
+    AND (
+        :houseNameFilter IS NULL OR :houseNameFilter = '' OR ap.apartmentName = :houseNameFilter
+    )
+""")
+    List<Resident> residentSearchResidentsByFilters(
+            @Param("residentId") Integer residentId,
+            @Param("houseNameFilter") String houseNameFilter,
+            @Param("roleFilter") AccountType roleFilter,
+            @Param("searchFilter") String searchFilter
+    );
 }

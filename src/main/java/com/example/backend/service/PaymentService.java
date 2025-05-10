@@ -150,7 +150,7 @@ public class PaymentService {
         int serverPort = request.getServerPort();
         String contextPath = request.getContextPath(); // thường là ""
 
-        // Nếu cổng là 80 hoặc 443 thì không cần hiển thị
+
         boolean isDefaultPort = ("http".equals(scheme) && serverPort == 80) ||
                 ("https".equals(scheme) && serverPort == 443);
 
