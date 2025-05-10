@@ -20,4 +20,8 @@ public interface NoticementRepository  extends JpaRepository<Noticement, Integer
     @Transactional
     @Query("UPDATE Noticement n SET n.watched = TRUE WHERE n.notificationId = :notificationId AND n.residentId = :residentId")
     int markAsWatched(Integer notificationId, Integer residentId);
+
+    @Transactional
+    @Query("SELECT COUNT(n) FROM Noticement n WHERE n.residentId = :residentId AND n.watched = FALSE")
+    int countUnwatchedByResidentId(Integer residentId);
 }
