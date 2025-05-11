@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: bluemoon-resident-management-app-backend
+    env: docker
+    region: singapore
+    plan: free
