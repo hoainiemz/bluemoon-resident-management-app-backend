@@ -1,17 +1,15 @@
-# Use a Java image
-FROM eclipse-temurin:17-jdk
-
-# Set working directory
+# Build stage
+FROM maven:3.9.4-eclipse-temurin-17 AS builder
 WORKDIR /app
+COPY . .
+RUN mvn clean package -DskipTests
 
-# Copy the built jar (chúng ta build jar trước)
-COPY target/*.jar app.jar
+# Run stage
+FROM eclipse-temurin:17-jdk
+WORKDIR /app
+COPY --from=builder /app/target/*.jar app.jar
 
-# Cổng do Render cung cấp qua biến môi trường $PORT
 ENV PORT=8080
-
-# Expose the port
 EXPOSE 8080
 
-# Run the jar file
 CMD ["sh", "-c", "java -jar app.jar --server.port=$PORT"]
