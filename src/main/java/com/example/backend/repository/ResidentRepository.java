@@ -34,8 +34,6 @@ public interface ResidentRepository extends JpaRepository<Resident, Integer> {
             @Param("moveInDate") LocalDate moveInDate
     );
 
-
-
     @Query(value = """
         SELECT DISTINCT ON (r.resident_id) r.*
         FROM resident r

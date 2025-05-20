@@ -1,13 +1,13 @@
 package com.example.backend.service;
 
 import com.example.backend.BackendApplication;
+import com.example.backend.Config;
 import com.example.backend.dto.PaymentProjectionDTO;
+import com.example.backend.dto.SePayTransactionDTO;
 import com.example.backend.model.*;
+import com.example.backend.model.enums.NotificationType;
 import com.example.backend.model.enums.VehicleType;
-import com.example.backend.repository.ApartmentRepository;
-import com.example.backend.repository.PaymentRepository;
-import com.example.backend.repository.SettlementRepository;
-import com.example.backend.repository.VehicleRepository;
+import com.example.backend.repository.*;
 import com.example.backend.util.ExcelExporter;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
@@ -37,7 +38,17 @@ public class PaymentService {
     @Autowired
     private VehicleRepository vehicleRepository;
     @Autowired
+    private FeedbackRepository feedbackRepository;
+    @Autowired
+    private NotificationItemRepository notificationRepository;
+    @Autowired
     private ExcelExporter excelExporter;
+    @Autowired
+    private RestTemplate restTemplate;
+    @Autowired
+    private ResidentRepository residentRepository;
+    @Autowired
+    private NoticementRepository noticementRepository;
 
 
     @GetMapping("/findpaymentbybillid")
@@ -92,8 +103,8 @@ public class PaymentService {
         paymentRepository.saveAll(payments);
     }
 
-    @GetMapping("/getbillpaymentlink")
-    public String getBillPaymentLink(@RequestParam int paymentId) {
+    @GetMapping(value = "/getbillpaymentlink", produces = MediaType.IMAGE_PNG_VALUE)
+    public byte[] getBillPaymentLink(@RequestParam int paymentId) {
         Payment payment = paymentRepository.findById(paymentId).get();
         Apartment apartment = payment.getApartment();
         Bill bill = payment.getBill();
@@ -103,13 +114,20 @@ public class PaymentService {
         }
         else {
             cost = apartment.getMonthlyFee();
+            cost = cost + vehicleRepository.countVehiclesBeforeDateWithType(apartment.getApartmentId(), VehicleType.Car, LocalDateTime.now()) * 1200000.0;
+            cost = cost + vehicleRepository.countVehiclesBeforeDateWithType(apartment.getApartmentId(), VehicleType.Motorbike, LocalDateTime.now()) * 70000.0;
         }
-        cost = cost + vehicleRepository.countVehiclesBeforeDateWithType(apartment.getApartmentId(), VehicleType.Car, LocalDateTime.now()) * 1200000.0;
-        cost = cost + vehicleRepository.countVehiclesBeforeDateWithType(apartment.getApartmentId(), VehicleType.Motorbike, LocalDateTime.now()) + 70000.0;
         if (LocalDateTime.now().isAfter(bill.getDueDate())) {
             cost = cost + bill.getLateFee();
         }
-        return getBaseUrl() + "/payment/pay?paymentId=" + paymentId + "&amount=" + cost;  // ví dụ trả về đường dẫn thanh toán
+//        return getBaseUrl() + "/payment/pay?paymentId=" + paymentId + "&amount=" + cost;  // ví dụ trả về đường dẫn thanh toán
+        byte[] qrImage = restTemplate.getForObject(
+                "https://qr.sepay.vn/img?acc=VQRQACNHR7348&bank=MBBank&amount={cost}&des=PAYFOR{paymentId}",
+                byte[].class,
+                cost,
+                paymentId
+        );
+        return qrImage;
     }
 
     @GetMapping("/pay")
@@ -117,8 +135,39 @@ public class PaymentService {
         Payment payment = paymentRepository.findById(paymentId).get();
         payment.setPayAmount(new BigDecimal(amount));
         payment.setPayTime(LocalDateTime.now());
-        paymentRepository.save(payment);
+        payment = paymentRepository.save(payment);
+        Feedback feedback = new Feedback(2, "Xác nhận thanh toán", "Phòng " + payment.getApartment().getApartmentName() + " đã thanh toán thành công khoản thu " + payment.getBill().getContent());
+        feedback.setType(NotificationType.Success.toString());
+        feedbackRepository.save(feedback);
+        NotificationItem noti = new NotificationItem("Thanh toán thành công", "Phòng " + payment.getApartment().getApartmentName() + " đã thanh toán thành công khoản thu " + payment.getBill().getContent(), NotificationType.Success.toString());
+        noti = notificationRepository.save(noti);
+        List<Resident> res = residentRepository.findResidentsByFilters(payment.getApartment().getApartmentName(), null, "");
+        NotificationItem finalNoti = noti;
+        List<Noticement> ds = res.stream().map(r -> new Noticement(null, finalNoti.getId(), r.getResidentId(), false)).collect(Collectors.toList());
+        noticementRepository.saveAll(ds);
         return "Thanh toán thành công";
+    }
+
+    @PostMapping("/webhook")
+    public ResponseEntity<String> handleWebhook(@RequestBody SePayTransactionDTO transaction) {
+        // Kiểm tra nội dung
+        System.out.println("Received webhook from SePay:");
+        System.out.println("Gateway: " + transaction.getGateway());
+        System.out.println("Amount: " + transaction.getTransferAmount());
+        System.out.println("Content: " + transaction.getContent());
+        int paymentId = 0;
+        int pos = transaction.getDescription().indexOf("PAYFOR");
+        for (int i = pos + 6; i < transaction.getDescription().length(); i++) {
+            if (transaction.getDescription().charAt(i) >= '0' && transaction.getDescription().charAt(i) <= '9') {
+                paymentId = paymentId * 10 + transaction.getDescription().charAt(i) - '0';
+            }
+            else {
+                break;
+            }
+        }
+        pay(paymentId, transaction.getTransferAmount().toString());
+
+        return ResponseEntity.ok("Webhook received successfully.");
     }
 
     @Transactional
