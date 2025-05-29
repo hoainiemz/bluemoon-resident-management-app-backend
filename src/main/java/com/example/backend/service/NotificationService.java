@@ -48,6 +48,10 @@ public class NotificationService {
         return notificationItemRepository.save(notificationItem);
     }
 
+    public List<NotificationItem> saveAll(List<NotificationItem> notificationItems) {
+        return notificationItemRepository.saveAll(notificationItems);
+    }
+
     @DeleteMapping("/deletenotificationbyid")
     public void deleteNotificationById(@RequestParam Integer id) {
         notificationItemRepository.deleteByNotificationId(id);

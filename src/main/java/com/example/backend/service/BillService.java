@@ -22,6 +22,10 @@ public class    BillService {
         return billRepository.save(bill);
     }
 
+    public List<Bill> saveAll(List<Bill> bills) {
+        return billRepository.saveAll(bills);
+    }
+
     @GetMapping("findbillbybillid")
     public Bill findBillByBillId(@RequestParam Integer billId) {
         return billRepository.findBillByBillId(billId).get();

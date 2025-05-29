@@ -57,4 +57,12 @@ public class SchedulerService {
     public List<Scheduler> getNotificationByFilter(@RequestParam(required = false, defaultValue = "") String typeFilter, @RequestParam(required = false, defaultValue = "") String searchFilter) {
         return schedulerRepository.findNotiWithFilters(typeFilter, searchFilter);
     }
+
+    public List<Scheduler> getScheduler(String type) {
+        return schedulerRepository.findAllPastSchedulers(type);
+    }
+
+    public List<Scheduler> saveAll(List<Scheduler> schedulers) {
+        return schedulerRepository.saveAll(schedulers);
+    }
 }

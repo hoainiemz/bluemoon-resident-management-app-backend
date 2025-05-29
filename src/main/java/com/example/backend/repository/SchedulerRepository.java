@@ -52,5 +52,8 @@ AND
     );
 
 
+    @Query(value = "SELECT * FROM scheduler WHERE scheduler_type = :schedulerType AND next_execution < (NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh')", nativeQuery = true)
+    List<Scheduler> findAllPastSchedulers(@Param("schedulerType") String schedulerType);
+
     Scheduler findBySchedulerId(Long schedulerId);
 }

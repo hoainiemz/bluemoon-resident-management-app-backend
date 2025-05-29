@@ -1,5 +1,10 @@
 package com.example.backend.model;
 
+import com.example.backend.dto.BillSchedulerDTO;
+import com.example.backend.dto.NotificationSchedulerDTO;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -44,4 +49,46 @@ public class Scheduler {
 
     public String getCycle() { return cycle; }
     public void setCycle(String cycle) { this.cycle = cycle; }
+
+    public BillSchedulerDTO billDTO() {
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            objectMapper.registerModule(new JavaTimeModule());
+
+            // Parse the JSON content to extract Bill and apartmentIds
+            BillSchedulerDTO data = objectMapper.readValue(this.content, BillSchedulerDTO.class);
+
+            BillSchedulerDTO dto = new BillSchedulerDTO();
+            dto.setId(this.schedulerId.intValue());
+            dto.setBill(data.getBill());
+            dto.setApartmentIds(data.getApartmentIds());
+
+            return dto;
+        } catch (JsonProcessingException e) {
+            // Handle JSON parsing error
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public NotificationSchedulerDTO notificationDTO() {
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            objectMapper.registerModule(new JavaTimeModule());
+
+            // Parse the JSON content to extract Bill and apartmentIds
+            NotificationSchedulerDTO data = objectMapper.readValue(this.content, NotificationSchedulerDTO.class);
+
+            NotificationSchedulerDTO dto = new NotificationSchedulerDTO();
+            dto.setId(this.schedulerId.intValue());
+            dto.setNotificationItem(data.getNotificationItem());
+            dto.setResidentIds(data.getResidentIds());
+
+            return dto;
+        } catch (JsonProcessingException e) {
+            // Handle JSON parsing error
+            e.printStackTrace();
+            return null;
+        }
+    }
 }
