@@ -114,6 +114,10 @@ public class Bill {
     public Double getFee() {
         return amount;
     }
+
+    public void setFee(Double fee) {
+        this.amount = fee;
+    }
     @Override
     public boolean equals(Object obj) {
         if (this == obj) return true;
